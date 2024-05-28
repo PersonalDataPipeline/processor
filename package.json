@@ -1,0 +1,49 @@
+{
+  "name": "pdpl-processor",
+  "version": "0.1.0",
+  "description": "",
+  "scripts": {
+    "test": "vitest run",
+    "test-watch": "vitest",
+    "dev": "rm -rf ./dist && tsc -w",
+    "build": "rm -rf ./dist && tsc",
+    "eslint": "eslint --fix src",
+    "eslint-ci": "eslint src",
+    "prettier": "prettier --write ./src/**/*.ts",
+    "prettier-ci": "prettier --check ./src/**/*.ts",
+    "prettier-watch": "onchange './src/**/*.ts' -- prettier --write --ignore-unknown {{changed}}",
+    "format": "npm run eslint && npm run prettier"
+  },
+  "author": "",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "@oclif/core": "^3.26.2",
+    "axios": "^1.6.5",
+    "csv": "^6.3.6",
+    "dotenv": "^16.3.1",
+    "joi": "^17.13.1",
+    "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^20.11.8",
+    "@typescript-eslint/eslint-plugin": "^7.1.0",
+    "@typescript-eslint/parser": "^7.1.0",
+    "eslint": "^8.57.0",
+    "onchange": "^7.1.0",
+    "prettier": "^3.2.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3",
+    "vitest": "^1.4.0"
+  },
+  "bin": {
+    "processor": "./bin/run.js"
+  },
+  "oclif": {
+    "bin": "processor",
+    "commands": "./dist/commands",
+    "dirname": "processor",
+    "topicSeparator": ":"
+  }
+}
