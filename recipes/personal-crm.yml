@@ -2,14 +2,12 @@ input:
   google:
     calendar--events:
       summary: 'event_summary'
-      start.date: 'start_date'
-      start.time: 'start_time'
+      start.dateTime: 'start_date_time'
       'attendees[].email': 'event_emails'
   apple-import:
     contacts:
-      firstName: 'first_name'
-      lastName: 'last_name'
-      'emailAddresses[].field': 'contact_emails'
+      'fn[].value': 'full_name'
+      'email[].value': 'contact_emails'
 output:
   file:
     - strategy: 'csv'
@@ -17,19 +15,23 @@ output:
         path: '/path/to/csv'
         filename: 'all_events'
         fields:
-          - start_date
-          - start_time
+          - start_date_time
           - event_summary
-          - contact_emails
+          - event_emails
   obsidian:
     - strategy: 'daily_notes_append'
       data:
         template: |
-          - ${event_summary} with ${:loop:contact_emails:, :[[${first_name} ${last_name}]]} at ${start_time}
+          - ${event_summary} with ${:loop:contact_emails:, :[[${full_name}]]} at ${start_date_time}
 pipeline:
-  - field: 'start_date'
+  - field: 'start_date_time'
     transform:
       - 'toStandardDate()'
+    var: 'start_date'
+  - field: 'start_date_time'
+    transform:
+      - 'toStandardTime()'
+    var: 'start_time'
   - field: 'event_summary'
     transform:
       - 'trim()'
