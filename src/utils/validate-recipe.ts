@@ -4,11 +4,13 @@ import { strict as assert } from "node:assert";
 import getConfig, { Config } from "../utils/config.js";
 import path from "path";
 import { readdirSync } from "fs";
-import { OutputHandler } from "./types.js";
+import { OutputHandler, OutputStrategy } from "./types.js";
 
 interface InputObject {
   [key: string]: {
-    [key: string]: string;
+    [key: string]: {
+      [key: string]: string;
+    };
   };
 }
 
@@ -20,13 +22,22 @@ interface OutputObject {
   }[];
 }
 
-interface RecipeObject {
+export interface RecipeObject {
   input: InputObject;
   output: OutputObject;
   pipeline: object[];
+  sources: {
+    [key: string]: string;
+  };
+  handlers: {
+    [key: string]: OutputStrategy;
+  };
 }
 
-export const validateRecipe = async (recipe: object, config: Config) => {
+export const validateRecipe = async (
+  recipe: object,
+  config: Config
+): Promise<RecipeObject> => {
   const { value, error } = Joi.object({
     input: Joi.object().pattern(
       Joi.string().valid(...getConfig().inputsSupported),
@@ -54,6 +65,7 @@ export const validateRecipe = async (recipe: object, config: Config) => {
         transform: Joi.array().items(Joi.string()),
         // TODO: Validate that this exists as an input field
         linkTo: Joi.string(),
+        var: Joi.string(),
       })
     ),
   }).validate(recipe);
@@ -62,6 +74,7 @@ export const validateRecipe = async (recipe: object, config: Config) => {
     throw new Error(`Recipe validation: ${error.details[0].message}`);
   }
 
+  (value as RecipeObject).sources = {};
   const inputNames = Object.keys((value as RecipeObject).input);
   for (const inputName of inputNames) {
     for (const subName of Object.keys((value as RecipeObject).input[inputName])) {
@@ -73,9 +86,11 @@ export const validateRecipe = async (recipe: object, config: Config) => {
       } catch (error) {
         throw new Error(`No data found for input ${inputName}.${subName}`);
       }
+      (value as RecipeObject).sources[`${inputName}.${subName}`] = dataPath;
     }
   }
 
+  (value as RecipeObject).handlers = {};
   const outputNames = Object.keys((value as RecipeObject).output);
   for (const outputName of outputNames) {
     const { default: outputHandler } = (await import(
@@ -105,6 +120,8 @@ export const validateRecipe = async (recipe: object, config: Config) => {
           `Output strategy ${strategyName} is not configured: \n${strategyErrors.join("\n")}`
         );
       }
+
+      (value as RecipeObject).handlers[`${outputName}.${strategyName}`] = outputStrategy;
     }
   }
 
