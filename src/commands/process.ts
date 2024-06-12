@@ -3,9 +3,10 @@ import { readFileSync } from "fs";
 import { fileURLToPath } from "url";
 import path, { dirname } from "path";
 import yaml from "js-yaml";
+import { Database } from "duckdb-async";
 
 import { BaseCommand } from "./_base.js";
-import { validateRecipe } from "../utils/validate-recipe.js";
+import { RecipeObject, validateRecipe } from "../utils/validate-recipe.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -19,6 +20,7 @@ export default class Process extends BaseCommand<typeof Process> {
   };
 
   public async run(): Promise<void> {
+    const duckDb = await Database.create(":memory:");
     const { RECIPE_NAME: recipeName } = this.args;
     const recipePath = path.join(__dirname, "..", "..", "recipes", `${recipeName}.yml`);
 
@@ -29,13 +31,55 @@ export default class Process extends BaseCommand<typeof Process> {
       throw new Error(`Unknown recipe: ${recipeName}`);
     }
 
-    const value = await validateRecipe(yaml.load(recipeContent) as object, this.conf);
+    const value: RecipeObject = await validateRecipe(
+      yaml.load(recipeContent) as object,
+      this.conf
+    );
 
-    console.log(Object.keys(value));
+    console.log(value);
 
-    // Iterate through relevant files
-    // Read file
-    // Filter fields
-    // Link data
+    for (const source in value.sources) {
+      const [inputName, inputData] = source.split(".");
+      const dataPath = value.sources[source];
+      const inputFields = value.input[inputName][inputData];
+
+      const select = [];
+      for (const sourceName in inputFields) {
+        const columnName = inputFields[sourceName];
+
+        if (sourceName.includes("[]")) {
+          const sourceParts = sourceName.split("[]");
+          select.push(
+            `list_transform(${sourceParts.shift()}, x -> x${sourceParts.join(".")}) AS ${columnName}`
+          );
+          continue;
+        }
+
+        if (sourceName.includes(".")) {
+          const sourceParts = sourceName.split(".");
+          select.push(
+            `${sourceParts.shift()}->>'${sourceParts.join("'->>'")}' AS ${columnName}`
+          );
+          continue;
+        }
+
+        select.push(`${sourceName} AS ${columnName}`);
+      }
+
+      const createTable =
+        `
+        CREATE TABLE '${source}' AS
+        SELECT ${select.join(",")}
+        FROM read_json_auto('${dataPath}/*.json', ` +
+        [
+          "union_by_name = true",
+          "convert_strings_to_integers = true",
+          "format = 'array'",
+          "records = true",
+        ].join(", ") +
+        ")";
+      await duckDb.all(createTable);
+      console.log(await duckDb.all(`SELECT * FROM '${source}' LIMIT 10;`));
+    }
   }
 }
