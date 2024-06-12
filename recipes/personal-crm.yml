@@ -1,0 +1,40 @@
+input:
+  google:
+    calendar--events:
+      summary: 'event_summary'
+      start.date: 'start_date'
+      start.time: 'start_time'
+      'attendees[].email': 'event_emails'
+  apple-import:
+    contacts:
+      firstName: 'first_name'
+      lastName: 'last_name'
+      'emailAddresses[].field': 'contact_emails'
+output:
+  file:
+    - strategy: 'csv'
+      data:
+        path: '/path/to/csv'
+        filename: 'all_events'
+        fields:
+          - start_date
+          - start_time
+          - event_summary
+          - contact_emails
+  obsidian:
+    - strategy: 'daily_notes_append'
+      data:
+        template: |
+          - ${event_summary} with ${:loop:contact_emails:, :[[${first_name} ${last_name}]]} at ${start_time}
+pipeline:
+  - field: 'start_date'
+    transform:
+      - 'toStandardDate()'
+  - field: 'event_summary'
+    transform:
+      - 'trim()'
+      - 'toSentenceCase()'
+  - field: 'event_emails'
+    linkTo: 'contact_emails'
+  - field: 'obsidian.daily_notes_append.date'
+    linkTo: 'start_date'
