@@ -10,7 +10,17 @@ Notes taken during development, newest to oldest.
 
 Finished up output validation and the modules for that are looking good. Similar shape as the API modules, typed, fairly straightforward. 
 
-Now moving on to using DuckDB to parse all the data. Seems like a perfect fit for what I'm doing and the [Node.js](https://duckdb.org/docs/api/nodejs/overview) support is a good sign.
+Now moving on to using DuckDB to parse all the data. Seems like a perfect fit for what I'm doing and the [Node.js](https://duckdb.org/docs/api/nodejs/overview) support is a good sign. The Node.js API works a bit differently than the command line and the output is JSON instead of a table. BUT ... it's all working very, very well so far! I can suck in all the JSON files for a certain endpoint in a single line and then select the fields that I want. Lots more to do here but everything is working right out of the box!
+
+Got all the input field juggling working and stored in their own tables, ready to combine. The data types that DuckDB use makes this quite easy, even for nested JSON. The process to read and transform data is very intuitive. In a single statement, I'm:
+
+- Reading in all JSON files
+- Parsing specific properties to columns
+- De-nesting properties that come in as objects
+- Reducing arrays of objects down to arrays of strings
+- Creating a table that I can immediately select from
+
+
 
 ## [[2024-06-10]]
 
