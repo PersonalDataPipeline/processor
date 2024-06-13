@@ -24,7 +24,7 @@ output:
       data:
         date: 'start_date'
         template: |
-          - ${event_summary} with [[${full_name}]] at ${start_date_time}
+          - {{ event_summary }} with [[People/{{ full_name }}|{{ full_name }}]] at {{ start_date_time }}
 pipeline:
   - field: 'start_date_time'
     transform:

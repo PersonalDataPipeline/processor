@@ -1,3 +1,5 @@
+import { RecipeObject } from "./validate-recipe.js";
+
 export interface OutputHandler {
   handlers: OutputStrategy[];
   isReady: () => boolean;
@@ -5,5 +7,6 @@ export interface OutputHandler {
 
 export interface OutputStrategy {
   name: () => string;
-  isReady: (data?: object) => string[];
+  isReady: (recipe: RecipeObject, data?: object) => string[];
+  handle: (inputData: any, data?: object) => void;
 }

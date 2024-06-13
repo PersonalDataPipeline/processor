@@ -6,6 +6,7 @@ import * as transformations from "../utils/transformations.js";
 import path from "path";
 import { readdirSync } from "fs";
 import { OutputHandler, OutputStrategy } from "./types.js";
+import { arrayMissingValue } from "./index.js";
 
 interface InputObject {
   [key: string]: {
@@ -41,16 +42,6 @@ export interface RecipeObject {
   };
   fields: string[];
 }
-
-const arrayMissingValue = (haystack: string[], needles: string[]): string => {
-  const haystackSet = new Set(haystack);
-  for (const needle of needles) {
-    if (!haystackSet.has(needle)) {
-      return needle;
-    }
-  }
-  return "";
-};
 
 export const validateRecipe = async (
   recipeRaw: object,
@@ -184,10 +175,10 @@ export const validateRecipe = async (
         throw new Error(`Invalid output strategy: ${strategyName}`);
       }
 
-      const strategyErrors = outputStrategy.isReady(strategyData);
+      const strategyErrors = outputStrategy.isReady(recipe, strategyData);
       if (strategyErrors.length > 0) {
         throw new Error(
-          `Output strategy ${strategyName} is not configured: \n${strategyErrors.join("\n")}`
+          `Output strategy ${strategyName} for ${outputName} is not configured: \n${strategyErrors.join("\n")}`
         );
       }
 
