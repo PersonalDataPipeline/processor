@@ -33,6 +33,7 @@ export interface RecipeObject {
   handlers: {
     [key: string]: OutputStrategy;
   };
+  fields: string[];
 }
 
 export const validateRecipe = async (
@@ -76,13 +77,16 @@ export const validateRecipe = async (
     throw new Error(`Recipe validation: ${error.details[0].message}`);
   }
 
+  let allFields: string[] = [];
+
   ////
   /// Validate inputs
   //
   (value as RecipeObject).sources = {};
   const inputNames = Object.keys((value as RecipeObject).input);
   for (const inputName of inputNames) {
-    for (const subName of Object.keys((value as RecipeObject).input[inputName])) {
+    const inputObject = (value as RecipeObject).input[inputName];
+    for (const subName in inputObject) {
       const dataPath = path.join(config.inputsDir, inputName, subName);
       try {
         // TODO: No data should not always throw
@@ -92,8 +96,15 @@ export const validateRecipe = async (
         throw new Error(`No data found for input ${inputName}.${subName}`);
       }
       (value as RecipeObject).sources[`${inputName}.${subName}`] = dataPath;
+      allFields = [...allFields, ...Object.values(inputObject[subName])];
     }
   }
+
+  if (allFields.length !== [...new Set(allFields)].length) {
+    throw new Error(`Duplicate input field(s) found in ${allFields.join(", ")}`);
+  }
+
+  (value as RecipeObject).fields = allFields;
 
   ////
   /// Validate outputs
@@ -107,8 +118,12 @@ export const validateRecipe = async (
       default: OutputHandler;
     };
 
+    if (!outputHandler) {
+      throw new Error(`Invalid output handler ${outputName}.`);
+    }
+
     if (!outputHandler.isReady()) {
-      throw new Error(`Output handler ${outputName} is not configured properly.`);
+      throw new Error(`Output handler ${outputName} is not configured.`);
     }
 
     for (const output of (value as RecipeObject).output[outputName]) {
@@ -131,6 +146,12 @@ export const validateRecipe = async (
 
       (value as RecipeObject).handlers[`${outputName}.${strategyName}`] = outputStrategy;
     }
+  }
+
+  ////
+  /// Validate pipeline
+  //
+  for (const action of (value as RecipeObject).pipeline) {
   }
 
   return value;
