@@ -22,22 +22,20 @@ output:
   obsidian:
     - strategy: 'daily_notes_append'
       data:
+        date: 'start_date'
         template: |
-          - ${event_summary} with ${:loop:contact_emails:, :[[${full_name}]]} at ${start_date_time}
+          - ${event_summary} with [[${full_name}]] at ${start_date_time}
 pipeline:
   - field: 'start_date_time'
     transform:
-      - 'toStandardDate()'
-    var: 'start_date'
+      - 'toStandardDate'
+    toField: 'start_date'
   - field: 'start_date_time'
     transform:
-      - 'toStandardTime()'
-    var: 'start_time'
+      - 'toStandardTime'
+    toField: 'start_time'
   - field: 'event_summary'
     transform:
-      - 'trim()'
-      - 'toSentenceCase()'
+      - 'trim'
   - field: 'event_emails'
     linkTo: 'contact_emails'
-  - field: 'obsidian.daily_notes_append.date'
-    linkTo: 'start_date'
