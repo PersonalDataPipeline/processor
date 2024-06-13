@@ -23,6 +23,7 @@ interface OutputObject {
 }
 
 export interface RecipeObject {
+  version: number;
   input: InputObject;
   output: OutputObject;
   pipeline: object[];
@@ -39,6 +40,7 @@ export const validateRecipe = async (
   config: Config
 ): Promise<RecipeObject> => {
   const { value, error } = Joi.object({
+    version: Joi.number().allow(0.1),
     input: Joi.object().pattern(
       Joi.string().valid(...getConfig().inputsSupported),
       Joi.object()
@@ -74,6 +76,9 @@ export const validateRecipe = async (
     throw new Error(`Recipe validation: ${error.details[0].message}`);
   }
 
+  ////
+  /// Validate inputs
+  //
   (value as RecipeObject).sources = {};
   const inputNames = Object.keys((value as RecipeObject).input);
   for (const inputName of inputNames) {
@@ -90,6 +95,9 @@ export const validateRecipe = async (
     }
   }
 
+  ////
+  /// Validate outputs
+  //
   (value as RecipeObject).handlers = {};
   const outputNames = Object.keys((value as RecipeObject).output);
   for (const outputName of outputNames) {
