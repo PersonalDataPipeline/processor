@@ -124,6 +124,36 @@ export const validateRecipe = async (
   recipe.fields = allFields;
 
   ////
+  /// Validate pipeline
+  //
+  for (const action of recipe.pipeline) {
+    const { field, transform, toField, linkTo } = action;
+
+    if (!recipe.fields.includes(field)) {
+      throw new Error(`Pipeline from field ${field} does not exist in input data.`);
+    }
+
+    const maybeMissingTransform = arrayMissingValue(
+      Object.keys(transformations),
+      transform || []
+    );
+    if (maybeMissingTransform) {
+      throw new Error(`Unkonwn pipeline transformation ${maybeMissingTransform}.`);
+    }
+
+    if (toField) {
+      if (recipe.fields.includes(toField)) {
+        throw new Error(`Pipeline to field ${toField} already exists in input data.`);
+      }
+      recipe.fields.push(toField);
+    }
+
+    if (linkTo && !recipe.fields.includes(linkTo)) {
+      throw new Error(`Pipeline link field ${linkTo} does not exist in input data.`);
+    }
+  }
+
+  ////
   /// Validate outputs
   //
   recipe.handlers = {};
@@ -162,33 +192,6 @@ export const validateRecipe = async (
       }
 
       recipe.handlers[`${outputName}.${strategyName}`] = outputStrategy;
-    }
-  }
-
-  ////
-  /// Validate pipeline
-  //
-  for (const action of recipe.pipeline) {
-    const { field, transform, toField, linkTo } = action;
-
-    if (!recipe.fields.includes(field)) {
-      throw new Error(`Pipeline from field ${field} does not exist in input data.`);
-    }
-
-    const maybeMissingTransform = arrayMissingValue(
-      Object.keys(transformations),
-      transform || []
-    );
-    if (maybeMissingTransform) {
-      throw new Error(`Unkonwn pipeline transformation ${maybeMissingTransform}.`);
-    }
-
-    if (toField && recipe.fields.includes(toField)) {
-      throw new Error(`Pipeline to field ${toField} already exists in input data.`);
-    }
-
-    if (linkTo && !recipe.fields.includes(linkTo)) {
-      throw new Error(`Pipeline link field ${linkTo} does not exist in input data.`);
     }
   }
 
