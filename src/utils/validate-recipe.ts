@@ -53,10 +53,10 @@ const arrayMissingValue = (haystack: string[], needles: string[]): string => {
 };
 
 export const validateRecipe = async (
-  recipe: object,
+  recipeRaw: object,
   config: Config
 ): Promise<RecipeObject> => {
-  const { value, error } = Joi.object({
+  const { value: recipe, error } = Joi.object({
     version: Joi.number().allow(0.1),
     input: Joi.object().pattern(
       Joi.string().valid(...getConfig().inputsSupported),
@@ -87,7 +87,7 @@ export const validateRecipe = async (
         toField: Joi.string(),
       })
     ),
-  }).validate(recipe) as { value: RecipeObject; error: ValidationError };
+  }).validate(recipeRaw) as { value: RecipeObject; error: ValidationError };
 
   if (error) {
     throw new Error(`Recipe validation: ${error.details[0].message}`);
@@ -98,10 +98,10 @@ export const validateRecipe = async (
   ////
   /// Validate inputs
   //
-  value.sources = {};
-  const inputNames = Object.keys(value.input);
+  recipe.sources = {};
+  const inputNames = Object.keys(recipe.input);
   for (const inputName of inputNames) {
-    const inputObject = value.input[inputName];
+    const inputObject = recipe.input[inputName];
     for (const subName in inputObject) {
       const dataPath = path.join(config.inputsDir, inputName, subName);
       try {
@@ -111,7 +111,7 @@ export const validateRecipe = async (
       } catch (error) {
         throw new Error(`No data found for input ${inputName}.${subName}`);
       }
-      value.sources[`${inputName}.${subName}`] = dataPath;
+      recipe.sources[`${inputName}.${subName}`] = dataPath;
 
       allFields = [...allFields, ...Object.values(inputObject[subName])];
     }
@@ -121,13 +121,13 @@ export const validateRecipe = async (
     throw new Error(`Duplicate input field(s) found in ${allFields.join(", ")}`);
   }
 
-  value.fields = allFields;
+  recipe.fields = allFields;
 
   ////
   /// Validate outputs
   //
-  value.handlers = {};
-  const outputNames = Object.keys(value.output);
+  recipe.handlers = {};
+  const outputNames = Object.keys(recipe.output);
   for (const outputName of outputNames) {
     const { default: outputHandler } = (await import(
       `../outputs/${outputName}/index.js`
@@ -143,7 +143,7 @@ export const validateRecipe = async (
       throw new Error(`Output handler ${outputName} is not configured.`);
     }
 
-    for (const output of value.output[outputName]) {
+    for (const output of recipe.output[outputName]) {
       const { strategy: strategyName, data: strategyData } = output;
 
       const outputStrategy = outputHandler.handlers
@@ -161,17 +161,17 @@ export const validateRecipe = async (
         );
       }
 
-      value.handlers[`${outputName}.${strategyName}`] = outputStrategy;
+      recipe.handlers[`${outputName}.${strategyName}`] = outputStrategy;
     }
   }
 
   ////
   /// Validate pipeline
   //
-  for (const action of value.pipeline) {
+  for (const action of recipe.pipeline) {
     const { field, transform, toField, linkTo } = action;
 
-    if (!value.fields.includes(field)) {
+    if (!recipe.fields.includes(field)) {
       throw new Error(`Pipeline from field ${field} does not exist in input data.`);
     }
 
@@ -183,14 +183,14 @@ export const validateRecipe = async (
       throw new Error(`Unkonwn pipeline transformation ${maybeMissingTransform}.`);
     }
 
-    if (toField && value.fields.includes(toField)) {
+    if (toField && recipe.fields.includes(toField)) {
       throw new Error(`Pipeline to field ${toField} already exists in input data.`);
     }
 
-    if (linkTo && !value.fields.includes(linkTo)) {
+    if (linkTo && !recipe.fields.includes(linkTo)) {
       throw new Error(`Pipeline link field ${linkTo} does not exist in input data.`);
     }
   }
 
-  return value;
+  return recipe;
 };
