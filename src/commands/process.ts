@@ -45,7 +45,6 @@ export default class Process extends BaseCommand<typeof Process> {
     ////
     /// Load input data
     //
-
     for (const source in recipe.sources) {
       const [inputName, inputData] = source.split(".");
       const dataPath = recipe.sources[source];
@@ -96,21 +95,23 @@ export default class Process extends BaseCommand<typeof Process> {
       const { field, transform = [], toField = field, linkTo } = action;
       const source = recipe.fields[field];
 
+      const results = await duckDb.all(`
+        SELECT ${field} FROM '${source}'
+      `);
+
       if (linkTo) {
         console.log(linkTo);
+        continue;
       }
 
       // Adding a new column instead of transforming in place
       if (toField !== field) {
+        // TODO: Need to account for types
         await duckDb.all(`
           ALTER TABLE '${source}'
           ADD COLUMN ${toField} VARCHAR DEFAULT NULL
         `);
       }
-
-      const results = await duckDb.all(`
-        SELECT ${field} FROM '${source}'
-      `);
 
       for (const result of results) {
         let value = result[field] as string;
@@ -118,6 +119,7 @@ export default class Process extends BaseCommand<typeof Process> {
           value = transformations[tranf](value);
         }
 
+        // TODO: Need to account for types
         const statement = await dbConn.prepare(`
           UPDATE '${source}'
           SET ${toField} = ?::VARCHAR
@@ -140,7 +142,7 @@ export default class Process extends BaseCommand<typeof Process> {
     //   `)
     // );
 
-    // console.log(await duckDb.all(`DESCRIBE TABLE 'google.calendar--events'`));
+    console.log(await duckDb.all(`DESCRIBE TABLE 'google.calendar--events'`));
     // console.log(await duckDb.all(`DESCRIBE TABLE 'apple-import.contacts'`));
   }
 }
