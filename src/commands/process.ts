@@ -7,10 +7,7 @@ import { Database } from "duckdb-async";
 
 import { BaseCommand } from "./_base.js";
 import { RecipeObject, validateRecipe } from "../utils/validate-recipe.js";
-import { PipelineTransforms } from "../utils/transformations.js";
-const { default: transformations } = (await import(`../utils/transformations.js`)) as {
-  default: PipelineTransforms;
-};
+import transformations from "../utils/transformations.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -129,7 +126,7 @@ export default class Process extends BaseCommand<typeof Process> {
       }
     }
 
-    console.log(await duckDb.all("SELECT * FROM 'google.calendar--events'"));
+    console.log(await duckDb.all("SELECT * FROM 'google.calendar--events' LIMIT 10"));
 
     // console.log(
     //   await duckDb.all(`
@@ -142,7 +139,7 @@ export default class Process extends BaseCommand<typeof Process> {
     //   `)
     // );
 
-    console.log(await duckDb.all(`DESCRIBE TABLE 'google.calendar--events'`));
+    // console.log(await duckDb.all(`DESCRIBE TABLE 'google.calendar--events'`));
     // console.log(await duckDb.all(`DESCRIBE TABLE 'apple-import.contacts'`));
   }
 }
