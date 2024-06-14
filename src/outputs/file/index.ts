@@ -29,7 +29,7 @@ const strategyIsReady = (recipe: RecipeObject, data?: StrategyData) => {
     errors.push("No file path to use");
   }
 
-  const maybeMissingField = arrayMissingValue(recipe.fields, data.fields);
+  const maybeMissingField = arrayMissingValue(Object.keys(recipe.fields), data.fields);
   if (maybeMissingField) {
     errors.push(`Found unknown field ${maybeMissingField}.`);
   }

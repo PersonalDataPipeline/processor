@@ -40,7 +40,9 @@ export interface RecipeObject {
   handlers: {
     [key: string]: OutputStrategy;
   };
-  fields: string[];
+  fields: {
+    [key: string]: string;
+  };
 }
 
 export const validateRecipe = async (
@@ -84,7 +86,7 @@ export const validateRecipe = async (
     throw new Error(`Recipe validation: ${error.details[0].message}`);
   }
 
-  let allFields: string[] = [];
+  const allFields: { [key: string]: string } = {};
 
   ////
   /// Validate inputs
@@ -94,22 +96,28 @@ export const validateRecipe = async (
   for (const inputName of inputNames) {
     const inputObject = recipe.input[inputName];
     for (const subName in inputObject) {
+      const inputFullName = `${inputName}.${subName}`;
       const dataPath = path.join(config.inputsDir, inputName, subName);
       try {
         // TODO: No data should not always throw
         const inputData = readdirSync(dataPath);
         assert(inputData.length >= 1);
       } catch (error) {
-        throw new Error(`No data found for input ${inputName}.${subName}`);
+        throw new Error(`Recipe validation: No data found for input ${inputFullName}`);
       }
-      recipe.sources[`${inputName}.${subName}`] = dataPath;
+      recipe.sources[`${inputFullName}`] = dataPath;
 
-      allFields = [...allFields, ...Object.values(inputObject[subName])];
+      const existingFields = Object.keys(allFields);
+      Object.values(inputObject[subName]).forEach((field) => {
+        if (existingFields.includes(field)) {
+          throw new Error(
+            `Recipe validation: Duplicate input field ${field} in ${inputFullName}`
+          );
+        }
+        allFields[field] = inputFullName;
+      });
+      console.log(allFields);
     }
-  }
-
-  if (allFields.length !== [...new Set(allFields)].length) {
-    throw new Error(`Duplicate input field(s) found in ${allFields.join(", ")}`);
   }
 
   recipe.fields = allFields;
@@ -120,8 +128,10 @@ export const validateRecipe = async (
   for (const action of recipe.pipeline) {
     const { field, transform, toField, linkTo } = action;
 
-    if (!recipe.fields.includes(field)) {
-      throw new Error(`Pipeline from field ${field} does not exist in input data.`);
+    if (!Object.keys(recipe.fields).includes(field)) {
+      throw new Error(
+        `Recipe validation: Pipeline from field "${field}" does not exist in input data.`
+      );
     }
 
     const maybeMissingTransform = arrayMissingValue(
@@ -129,18 +139,24 @@ export const validateRecipe = async (
       transform || []
     );
     if (maybeMissingTransform) {
-      throw new Error(`Unkonwn pipeline transformation ${maybeMissingTransform}.`);
+      throw new Error(
+        `Recipe validation: Unkonwn pipeline transformation "${maybeMissingTransform}."`
+      );
     }
 
     if (toField) {
-      if (recipe.fields.includes(toField)) {
-        throw new Error(`Pipeline to field ${toField} already exists in input data.`);
+      if (Object.keys(recipe.fields).includes(toField)) {
+        throw new Error(
+          `Recipe validation: Pipeline to field "${toField}" already exists in input data.`
+        );
       }
-      recipe.fields.push(toField);
+      recipe.fields[toField] = recipe.fields[field];
     }
 
-    if (linkTo && !recipe.fields.includes(linkTo)) {
-      throw new Error(`Pipeline link field ${linkTo} does not exist in input data.`);
+    if (linkTo && !Object.keys(recipe.fields).includes(linkTo)) {
+      throw new Error(
+        `Recipe validation: Pipeline linkTo field "${linkTo}" does not exist in input data.`
+      );
     }
   }
 

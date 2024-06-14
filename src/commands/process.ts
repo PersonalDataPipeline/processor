@@ -7,6 +7,7 @@ import { Database } from "duckdb-async";
 
 import { BaseCommand } from "./_base.js";
 import { RecipeObject, validateRecipe } from "../utils/validate-recipe.js";
+import * as transformations from "../utils/transformations.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -31,17 +32,19 @@ export default class Process extends BaseCommand<typeof Process> {
       throw new Error(`Unknown recipe: ${recipeName}`);
     }
 
-    const value: RecipeObject = await validateRecipe(
+    const recipe: RecipeObject = await validateRecipe(
       yaml.load(recipeContent) as object,
       this.conf
     );
 
-    console.log(value);
+    ////
+    /// Load input data
+    //
 
-    for (const source in value.sources) {
+    for (const source in recipe.sources) {
       const [inputName, inputData] = source.split(".");
-      const dataPath = value.sources[source];
-      const inputFields = value.input[inputName][inputData];
+      const dataPath = recipe.sources[source];
+      const inputFields = recipe.input[inputName][inputData];
 
       const select = [];
       for (const sourceName in inputFields) {
@@ -66,6 +69,7 @@ export default class Process extends BaseCommand<typeof Process> {
         select.push(`${sourceName} AS ${columnName}`);
       }
 
+      // TODO: Need to filter out the list of files to just the most recent
       const createTable =
         `
         CREATE TABLE '${source}' AS
@@ -79,7 +83,6 @@ export default class Process extends BaseCommand<typeof Process> {
         ].join(", ") +
         ")";
       await duckDb.all(createTable);
-      console.log(await duckDb.all(`SELECT * FROM '${source}' LIMIT 10;`));
     }
   }
 }

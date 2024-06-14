@@ -32,7 +32,7 @@ const handler: OutputHandler = {
           errors.push("Missing date field");
         }
 
-        if (data.date && !recipe.fields.includes(data.date)) {
+        if (data.date && !Object.keys(recipe.fields).includes(data.date)) {
           errors.push(`Date field ${data.date} does not exist in input data.`);
         }
 
@@ -45,7 +45,10 @@ const handler: OutputHandler = {
           (match) => match[0].replace(templateRegex, "$1").trim()
         );
 
-        const maybeMissingField = arrayMissingValue(recipe.fields, templateMatches);
+        const maybeMissingField = arrayMissingValue(
+          Object.keys(recipe.fields),
+          templateMatches
+        );
 
         if (maybeMissingField) {
           errors.push(`Found unknown field ${maybeMissingField} in template.`);
