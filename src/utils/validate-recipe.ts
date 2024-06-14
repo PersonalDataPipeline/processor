@@ -2,7 +2,7 @@ import Joi, { ValidationError } from "joi";
 import { strict as assert } from "node:assert";
 
 import getConfig, { Config } from "../utils/config.js";
-import * as transformations from "../utils/transformations.js";
+import transformations, { PipelineTransforms } from "../utils/transformations.js";
 import path from "path";
 import { readdirSync } from "fs";
 import { OutputHandler, OutputStrategy } from "./types.js";
@@ -30,7 +30,7 @@ export interface RecipeObject {
   output: OutputObject;
   pipeline: {
     field: string;
-    transform?: string[];
+    transform?: (keyof PipelineTransforms)[];
     toField?: string;
     linkTo?: string;
   }[];
@@ -116,7 +116,6 @@ export const validateRecipe = async (
         }
         allFields[field] = inputFullName;
       });
-      console.log(allFields);
     }
   }
 
