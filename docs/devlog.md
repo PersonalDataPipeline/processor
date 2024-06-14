@@ -8,7 +8,17 @@ Notes taken during development, newest to oldest.
 
 ## [[2024-06-14]]
 
-Working through the pipeline actions now. No red flags on this approach so far but getting caught up in the words that I'm using to describe things and feel like I need a step back on that. Not where I need to be spending my time right now, though. 
+Working through the pipeline actions now. No red flags on this approach so far but getting caught up in the words that I'm using to describe things and feel like I need a step back on that. Not where I need to be spending my time right now, though.
+
+I'm working on getting the pipeline running and getting caught up on a couple of things. 
+
+- I'm definitely seeing the benefit of having a data preparation stage before working with what we've got. The Apple contacts data comes from vCard data which parses out to a bunch of arrays. In many cases, those arrays represent a single value but they get imported by DuckDB as a list, making it hard to work with. I can handle that with the single processor service but I'm trying to decide if it makes sense to run two pipelines, the "prep" one and the "actual" one, or make it work with a single pipeline by allowing transforms to a new column. 
+- I'm trying to figure out how to deal with pipeline transformation updates. I'm doing it all with single-row updates for each transformation, which is probably the slowest way to do that but I'm not too worried about performance right now. Problem is that there is no consistent id to run those queries on so I'm potentially transforming multiple values at once multiple times. I feel like there is a way to do this positionally, with the update coming in as a single array of new values but I'm not sure how to do it yet.
+- Column types are starting to become problematic with transforms. I want to use DuckDB's duck-typing magic as much as possible and not require users to indicate it in the recipe. I think it's possible but, again, not sure how. 
+- The linking is proving difficult, mostly as expected. I think the answer here is to create new columns as though we're joining but I'm not quite sure how to do that yet. 
+
+I'm definitely going to level up (again) on SQL-like statements with this project!
+
 
 ## [[2024-06-13]]
 
