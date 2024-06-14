@@ -4,7 +4,28 @@ Notes taken during development, newest to oldest.
 
 ## issues
 - Recipes as files are hard to browse and would become unwieldy at some point
-- Feels like we need to indicate a "primary" data source that everything hangs off of but that might be limiting down the road
+- Need better reporting/logging and control over when an error is thrown versus no output
+
+## [[2024-06-14]]
+
+Working through the pipeline actions now. No red flags on this approach so far but getting caught up in the words that I'm using to describe things and feel like I need a step back on that. Not where I need to be spending my time right now, though. 
+
+## [[2024-06-13]]
+
+Talking through the design that's kind of coming together in this service. Besides basic recipe validation, processing amounts to:
+
+- Validate input data
+	- This is currently just validating that the input name and "sub-name" point to a directory with data in it
+	- Seems like there are use cases for both "have no data but processing can still happen" and "have no data but processing should stop." Might need to be indicated in the recipe somehow.
+- Validate output handlers
+	- Does the handler exist and is it configured properly
+	- Validate the data object from the recipe
+- Validate the pipeline
+	- Check that all fields referenced exist in the input data or were created in the pipeline
+	- Check that transformation functions exist
+- Load input data from sources into their own tables
+	- Fields map to columns
+	- Only load the fields we're using
 
 ## [[2024-06-12]]
 
