@@ -96,6 +96,10 @@ export default class Process extends BaseCommand<typeof Process> {
       const { field, transform = [], toField = field, linkTo } = action;
       const source = recipe.fields[field];
 
+      if (linkTo) {
+        console.log(linkTo);
+      }
+
       // Adding a new column instead of transforming in place
       if (toField !== field) {
         await duckDb.all(`
@@ -122,10 +126,8 @@ export default class Process extends BaseCommand<typeof Process> {
         await statement.all(value, result[field]);
       }
     }
-    console.log(await duckDb.all("SELECT * FROM 'google.calendar--events'"));
 
-    // New fields -> columns
-    // ALTER TABLE integers ADD COLUMN l INTEGER DEFAULT 10;
+    console.log(await duckDb.all("SELECT * FROM 'google.calendar--events'"));
 
     // console.log(
     //   await duckDb.all(`
@@ -137,6 +139,7 @@ export default class Process extends BaseCommand<typeof Process> {
     //     LIMIT 10;
     //   `)
     // );
+
     // console.log(await duckDb.all(`DESCRIBE TABLE 'google.calendar--events'`));
     // console.log(await duckDb.all(`DESCRIBE TABLE 'apple-import.contacts'`));
   }
