@@ -56,7 +56,12 @@ export const validateRecipe = async (
       Joi.object()
         .pattern(
           Joi.string(),
-          Joi.object().pattern(Joi.string(), Joi.string().pattern(/^[a-z\d_]*$/))
+          Joi.object().pattern(
+            Joi.string(),
+            Joi.string()
+              .pattern(/^[\w_]*$/)
+              .invalid("_id")
+          )
         )
         .unknown()
     ),
@@ -110,11 +115,6 @@ export const validateRecipe = async (
 
       const existingFields = Object.keys(allFields);
       for (const field of Object.values(inputObject[subName])) {
-        if (field === "_id") {
-          throw new Error(
-            `${msgPrefix}Found reserved field name "_id" in ${inputFullName}`
-          );
-        }
         if (existingFields.includes(field)) {
           throw new Error(
             `${msgPrefix}Duplicate input field ${field} in ${inputFullName}`
