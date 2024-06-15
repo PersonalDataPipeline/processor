@@ -87,6 +87,7 @@ export const validateRecipe = async (
   }
 
   const allFields: { [key: string]: string } = {};
+  const msgPrefix = "Recipe validation: ";
 
   ////
   /// Validate inputs
@@ -103,7 +104,7 @@ export const validateRecipe = async (
         const inputData = readdirSync(dataPath);
         assert(inputData.length >= 1);
       } catch (error) {
-        throw new Error(`Recipe validation: No data found for input ${inputFullName}`);
+        throw new Error(`${msgPrefix}No data found for input ${inputFullName}`);
       }
       recipe.sources[`${inputFullName}`] = dataPath;
 
@@ -111,12 +112,12 @@ export const validateRecipe = async (
       for (const field of Object.values(inputObject[subName])) {
         if (field === "_id") {
           throw new Error(
-            `Recipe validation: Found reserved field name "_id" in ${inputFullName}`
+            `${msgPrefix}Found reserved field name "_id" in ${inputFullName}`
           );
         }
         if (existingFields.includes(field)) {
           throw new Error(
-            `Recipe validation: Duplicate input field ${field} in ${inputFullName}`
+            `${msgPrefix}Duplicate input field ${field} in ${inputFullName}`
           );
         }
         allFields[field] = inputFullName;
@@ -134,7 +135,7 @@ export const validateRecipe = async (
 
     if (!Object.keys(recipe.fields).includes(field)) {
       throw new Error(
-        `Recipe validation: Pipeline from field "${field}" does not exist in input data.`
+        `${msgPrefix}Pipeline from field "${field}" does not exist in input data.`
       );
     }
 
@@ -144,23 +145,25 @@ export const validateRecipe = async (
     );
     if (maybeMissingTransform) {
       throw new Error(
-        `Recipe validation: Unkonwn pipeline transformation "${maybeMissingTransform}."`
+        `${msgPrefix}Unkonwn pipeline transformation "${maybeMissingTransform}."`
       );
     }
 
     if (toField) {
       if (Object.keys(recipe.fields).includes(toField)) {
         throw new Error(
-          `Recipe validation: Pipeline to field "${toField}" already exists in input data.`
+          `${msgPrefix}Pipeline to field "${toField}" already exists in input data.`
         );
       }
       recipe.fields[toField] = recipe.fields[field];
     }
 
-    if (linkTo && !Object.keys(recipe.fields).includes(linkTo)) {
-      throw new Error(
-        `Recipe validation: Pipeline linkTo field "${linkTo}" does not exist in input data.`
-      );
+    if (linkTo) {
+      if (!Object.keys(recipe.fields).includes(linkTo)) {
+        throw new Error(
+          `${msgPrefix}Pipeline linkTo field "${linkTo}" does not exist in input data.`
+        );
+      }
     }
   }
 
