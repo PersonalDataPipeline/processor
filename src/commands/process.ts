@@ -71,21 +71,22 @@ export default class Process extends BaseCommand<typeof Process> {
       }
 
       // TODO: Need to filter out the list of files to just the most recent
-      await duckDb.all(
-        `CREATE TABLE '${source}' AS
-        SELECT ${select.join(",")}
-        FROM read_json_auto('${dataPath}/*.json', ` +
-          [
-            "union_by_name = true",
-            "convert_strings_to_integers = true",
-            "format = 'array'",
-            "records = true",
-          ].join(", ") +
-          ");"
-      );
+      const readJsonOptions = [
+        "union_by_name = true",
+        "convert_strings_to_integers = true",
+        "format = 'array'",
+        "records = true",
+      ].join(", ");
+
       await duckDb.all(`
+        CREATE TABLE '${source}' AS
+        SELECT ${select.join(",")}
+        FROM read_json_auto('${dataPath}/*.json', ${readJsonOptions});
+        
         CREATE SEQUENCE IF NOT EXISTS seq_id START WITH 1;
-        ALTER TABLE '${source}' ADD COLUMN _id INTEGER DEFAULT nextval('seq_id');
+
+        ALTER TABLE '${source}' 
+        ADD COLUMN _id INTEGER DEFAULT nextval('seq_id');
       `);
     }
 
