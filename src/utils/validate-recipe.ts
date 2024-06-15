@@ -158,18 +158,10 @@ export const validateRecipe = async (
       recipe.fields[toField] = recipe.fields[field];
     }
 
-    if (linkTo) {
-      if (!Object.keys(recipe.fields).includes(linkTo)) {
-        throw new Error(
-          `${msgPrefix}Pipeline linkTo field "${linkTo}" does not exist in input data.`
-        );
-      }
-
-      if (!toField) {
-        throw new Error(
-          `${msgPrefix}Pipeline linkTo field "${linkTo}" found without a toField indicated.`
-        );
-      }
+    if (linkTo && !Object.keys(recipe.fields).includes(linkTo)) {
+      throw new Error(
+        `${msgPrefix}Pipeline linkTo field "${linkTo}" does not exist in input data.`
+      );
     }
   }
 
