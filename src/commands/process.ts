@@ -81,8 +81,12 @@ export default class Process extends BaseCommand<typeof Process> {
             "format = 'array'",
             "records = true",
           ].join(", ") +
-          ")"
+          ");"
       );
+      await duckDb.all(`
+        CREATE SEQUENCE IF NOT EXISTS seq_id START WITH 1;
+        ALTER TABLE '${source}' ADD COLUMN _id INTEGER DEFAULT nextval('seq_id');
+      `);
     }
 
     ////
@@ -93,7 +97,7 @@ export default class Process extends BaseCommand<typeof Process> {
       const source = recipe.fields[field];
 
       const results = await duckDb.all(`
-        SELECT ${field} FROM '${source}'
+        SELECT _id, ${field} FROM '${source}'
       `);
 
       if (linkTo) {
@@ -119,10 +123,11 @@ export default class Process extends BaseCommand<typeof Process> {
         // TODO: Need to account for types
         const statement = await dbConn.prepare(`
           UPDATE '${source}'
-          SET ${toField} = ?::VARCHAR
-          WHERE ${field} = ?::VARCHAR
+          SET ${toField} = ?::STRING
+          WHERE _id = ?::INTEGER
         `);
-        await statement.all(value, result[field]);
+
+        await statement.all(value, result["_id"]);
       }
     }
 

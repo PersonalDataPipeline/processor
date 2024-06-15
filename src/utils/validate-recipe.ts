@@ -108,14 +108,19 @@ export const validateRecipe = async (
       recipe.sources[`${inputFullName}`] = dataPath;
 
       const existingFields = Object.keys(allFields);
-      Object.values(inputObject[subName]).forEach((field) => {
+      for (const field of Object.values(inputObject[subName])) {
+        if (field === "_id") {
+          throw new Error(
+            `Recipe validation: Found reserved field name "_id" in ${inputFullName}`
+          );
+        }
         if (existingFields.includes(field)) {
           throw new Error(
             `Recipe validation: Duplicate input field ${field} in ${inputFullName}`
           );
         }
         allFields[field] = inputFullName;
-      });
+      }
     }
   }
 
