@@ -164,6 +164,12 @@ export const validateRecipe = async (
           `${msgPrefix}Pipeline linkTo field "${linkTo}" does not exist in input data.`
         );
       }
+
+      if (!toField) {
+        throw new Error(
+          `${msgPrefix}Pipeline linkTo field "${linkTo}" found without a toField indicated.`
+        );
+      }
     }
   }
 
