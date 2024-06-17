@@ -42,6 +42,7 @@ export default class Process extends BaseCommand<typeof Process> {
     ////
     /// Load input data
     //
+    const describeTables: { [key: string]: { [key: string]: string } } = {};
     for (const source in recipe.sources) {
       const [inputName, inputData] = source.split(".");
       const dataPath = recipe.sources[source];
@@ -70,7 +71,6 @@ export default class Process extends BaseCommand<typeof Process> {
         select.push(`${sourceName} AS ${columnName}`);
       }
 
-      // TODO: Need to filter out the list of files to just the most recent
       const readJsonOptions = [
         "union_by_name = true",
         "convert_strings_to_integers = true",
@@ -78,6 +78,7 @@ export default class Process extends BaseCommand<typeof Process> {
         "records = true",
       ].join(", ");
 
+      // TODO: Need to filter out the list of files to just the most recent
       await duckDb.all(`
         CREATE TABLE '${source}' AS
         SELECT ${select.join(",")}
@@ -88,26 +89,88 @@ export default class Process extends BaseCommand<typeof Process> {
         ALTER TABLE '${source}' 
         ADD COLUMN _id INTEGER DEFAULT nextval('seq_id');
       `);
+
+      const description = await duckDb.all(`DESCRIBE TABLE '${source}'`);
+      describeTables[source] = {
+        ...Object.fromEntries([
+          ...description.map((table) => [
+            table["column_name"] as string,
+            table["column_type"] as string,
+          ]),
+        ]),
+      } as { [key: string]: string };
     }
 
     ////
     /// Process pipeline
     //
     for (const action of recipe.pipeline) {
-      const { field, transform = [], toField = field, linkTo } = action;
-      const source = recipe.fields[field];
+      const { field: fromField, transform = [], toField = fromField, linkTo } = action;
+      const source = recipe.fields[fromField];
+      const fieldType = describeTables[source][fromField];
 
       const results = await duckDb.all(`
-        SELECT _id, ${field} FROM '${source}'
+        SELECT _id, ${fromField} FROM '${source}'
       `);
 
       if (linkTo) {
-        console.log(linkTo);
+        const linkSource = recipe.fields[linkTo];
+        const linkToType = describeTables[linkSource][linkTo];
+        const linkFields = Object.keys(describeTables[linkSource]).filter(
+          (field) => field !== "_id"
+        );
+
+        let onStatement = "";
+        if (linkToType === fieldType) {
+          if (fieldType.slice(-2) === "[]") {
+            // Intersection (value in one list appears in the other list)
+            onStatement = `len(list_intersect(${fromField}, ${linkTo})) > 0`;
+          } else {
+            // Equality (columns are the same type)
+            onStatement = `${fromField} = ${linkTo}`;
+          }
+        } else if (fieldType.slice(-2) === "[]" && linkToType.slice(-2) !== "[]") {
+          // Inclusion (value in linkTo appears in fromField list)
+          onStatement = `list_contains(${fromField}, ${linkTo})`;
+        } else if (fieldType.slice(-2) !== "[]" && linkToType.slice(-2) === "[]") {
+          // Inclusion (value in fromField appears in linkTo list)
+          onStatement = `list_contains(${linkTo}, ${fromField})`;
+        } else {
+          throw new Error(
+            `Pipeline execution: Cannot link ${fieldType} to ${linkToType}`
+          );
+        }
+
+        const selectStatements = [];
+        for (const linkField of linkFields) {
+          const newColumnType = describeTables[linkSource][linkField];
+          const newFieldColumn = linkField + "__LINKED";
+
+          await duckDb.all(`
+            ALTER TABLE '${source}' 
+            ADD COLUMN ${newFieldColumn} ${newColumnType}[];
+          `);
+
+          describeTables[source][newFieldColumn] = newColumnType;
+          recipe.fields[newFieldColumn] = source;
+          selectStatements.push(
+            `list("${linkSource}".${linkField}) AS ${newFieldColumn}`
+          );
+
+          await duckDb.all(`
+            UPDATE "${source}"
+            SET ${newFieldColumn} = (
+                SELECT list(${linkField})
+                FROM "${linkSource}"
+                WHERE ${onStatement}
+            );
+          `);
+        }
         continue;
       }
 
       // Adding a new column instead of transforming in place
-      if (toField !== field) {
+      if (toField !== fromField) {
         // TODO: Need to account for types
         await duckDb.all(`
           ALTER TABLE '${source}'
@@ -116,7 +179,7 @@ export default class Process extends BaseCommand<typeof Process> {
       }
 
       for (const result of results) {
-        let value = result[field] as string;
+        let value = result[fromField] as string;
         for (const tranf of transform) {
           value = transformations[tranf](value);
         }
@@ -132,20 +195,19 @@ export default class Process extends BaseCommand<typeof Process> {
       }
     }
 
-    console.log(await duckDb.all("SELECT * FROM 'google.calendar--events' LIMIT 10"));
-
-    // console.log(
-    //   await duckDb.all(`
-    //     SELECT events.*, flatten(list(full_name)) AS full_name
-    //     FROM 'google.calendar--events' AS 'events'
-    //     LEFT OUTER JOIN 'apple-import.contacts'
-    //       ON len(list_intersect(event_emails, contact_emails)) > 0
-    //     GROUP BY event.*
-    //     LIMIT 10;
-    //   `)
-    // );
-
-    // console.log(await duckDb.all(`DESCRIBE TABLE 'google.calendar--events'`));
-    // console.log(await duckDb.all(`DESCRIBE TABLE 'apple-import.contacts'`));
+    // console.log(recipe);
+    // console.log(describeTables);
+    console.log(
+      JSON.stringify(
+        await duckDb.all(
+          `SELECT * 
+          FROM 'google.calendar--events' 
+          WHERE full_name__LINKED IS NOT NULL 
+          LIMIT 100`
+        ),
+        null,
+        2
+      )
+    );
   }
 }
