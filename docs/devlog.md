@@ -6,6 +6,17 @@ Notes taken during development, newest to oldest.
 - Recipes as files are hard to browse and would become unwieldy at some point
 - Need better reporting/logging and control over when an error is thrown versus no output
 
+## [[2024-06-16]]
+
+Trying to figure out how to link two tables together ... there are a few layers of types to deal with:
+
+- The types of the link from and link to fields. There are only certain combinations that can be linked automatically:
+	- Intersection (value in one list appears in the other list)
+	- Equality (columns are the same type)
+	- Inclusion (value in one column appears in a list)
+- The types of the link to columns. These will be aggregated based on the join, which has to happen in the query. Just realized that we're aggregating these together into a list so we don't have to be type-aware in the query.
+
+
 ## [[2024-06-14]]
 
 Working through the pipeline actions now. No red flags on this approach so far but getting caught up in the words that I'm using to describe things and feel like I need a step back on that. Not where I need to be spending my time right now, though.
