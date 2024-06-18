@@ -160,9 +160,9 @@ export default class Process extends BaseCommand<typeof Process> {
           await duckDb.all(`
             UPDATE "${source}"
             SET ${newFieldColumn} = (
-                SELECT list(${linkField})
-                FROM "${linkSource}"
-                WHERE ${onStatement}
+              SELECT list(${linkField})
+              FROM "${linkSource}"
+              WHERE ${onStatement}
             );
           `);
         }
@@ -195,19 +195,19 @@ export default class Process extends BaseCommand<typeof Process> {
       }
     }
 
-    // console.log(recipe);
-    // console.log(describeTables);
-    console.log(
-      JSON.stringify(
-        await duckDb.all(
-          `SELECT * 
-          FROM 'google.calendar--events' 
-          WHERE full_name__LINKED IS NOT NULL 
-          LIMIT 100`
-        ),
-        null,
-        2
-      )
-    );
+    console.log(recipe);
+    console.log(describeTables);
+    // console.log(
+    //   JSON.stringify(
+    //     await duckDb.all(
+    //       `SELECT *
+    //       FROM 'google.calendar--events'
+    //       WHERE full_name__LINKED IS NOT NULL
+    //       LIMIT 100`
+    //     ),
+    //     null,
+    //     2
+    //   )
+    // );
   }
 }
