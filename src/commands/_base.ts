@@ -29,8 +29,10 @@ export abstract class BaseCommand<T extends typeof Command> extends Command {
   protected flags!: Flags<T>;
   protected args!: Args<T>;
   protected conf!: Config;
+  protected startMs!: number;
 
   public override async init(): Promise<void> {
+    this.startMs = Date.now();
     await super.init();
     const { args, flags } = await this.parse({
       flags: this.ctor.flags,
@@ -50,6 +52,7 @@ export abstract class BaseCommand<T extends typeof Command> extends Command {
   }
 
   protected override async finally(_: Error | undefined) {
+    this.log(`Run took ${Math.round(Date.now() - this.startMs) / 1000} seconds`);
     await super.finally(_);
   }
 }
