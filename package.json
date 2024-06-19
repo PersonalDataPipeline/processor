@@ -24,7 +24,8 @@
     "dotenv": "^16.3.1",
     "duckdb-async": "^1.0.0",
     "joi": "^17.13.1",
-    "js-yaml": "^4.1.0"
+    "js-yaml": "^4.1.0",
+    "mustache": "^4.2.0"
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
