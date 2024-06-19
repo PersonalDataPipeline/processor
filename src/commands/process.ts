@@ -141,7 +141,6 @@ export default class Process extends BaseCommand<typeof Process> {
           );
         }
 
-        const selectStatements = [];
         for (const linkField of linkFields) {
           const newColumnType = describeTables[linkSource][linkField];
           const newFieldColumn = linkField + "__LINKED";
@@ -153,9 +152,6 @@ export default class Process extends BaseCommand<typeof Process> {
 
           describeTables[source][newFieldColumn] = newColumnType;
           recipe.fields[newFieldColumn] = source;
-          selectStatements.push(
-            `list("${linkSource}".${linkField}) AS ${newFieldColumn}`
-          );
 
           await duckDb.all(`
             UPDATE "${source}"
@@ -195,19 +191,7 @@ export default class Process extends BaseCommand<typeof Process> {
       }
     }
 
-    console.log(recipe);
-    console.log(describeTables);
-    // console.log(
-    //   JSON.stringify(
-    //     await duckDb.all(
-    //       `SELECT *
-    //       FROM 'google.calendar--events'
-    //       WHERE full_name__LINKED IS NOT NULL
-    //       LIMIT 100`
-    //     ),
-    //     null,
-    //     2
-    //   )
-    // );
+    // console.log(recipe);
+    // console.log(describeTables);
   }
 }
