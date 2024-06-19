@@ -1,6 +1,6 @@
+import { Database } from "duckdb-async";
 import { arrayMissingValue } from "../../utils/index.js";
 import { OutputHandler } from "../../utils/types.js";
-import { RecipeObject } from "../../utils/validate-recipe.js";
 
 const { OBSIDIAN_PATH_TO_NOTES = "" } = process.env;
 
@@ -21,34 +21,32 @@ const handler: OutputHandler = {
   handlers: [
     {
       name: () => "daily_notes_append",
-      isReady: (recipe: RecipeObject, data?: { template?: string; date?: string }) => {
+      isReady: (fields: object, strategyData?: StrategyData) => {
         const errors: string[] = [];
-        if (!data || typeof data !== "object") {
+
+        if (!strategyData || typeof strategyData !== "object") {
           errors.push("Missing output data fields: date, template");
           return errors;
         }
 
-        if (!data.date) {
+        if (!strategyData.date) {
           errors.push("Missing date field");
         }
 
-        if (data.date && !Object.keys(recipe.fields).includes(data.date)) {
-          errors.push(`Date field ${data.date} does not exist in input data.`);
+        if (strategyData.date && !Object.keys(fields).includes(strategyData.date)) {
+          errors.push(`Date field ${strategyData.date} does not exist in input data.`);
         }
 
-        if (!data.template) {
+        if (!strategyData.template) {
           errors.push("Missing template");
         }
 
         const templateRegex = /\{{2}(\s*\w+\s*)\}{2}/g;
-        const templateMatches = [...(data.template?.matchAll(templateRegex) || [])].map(
-          (match) => match[0].replace(templateRegex, "$1").trim()
-        );
+        const templateMatches = [
+          ...(strategyData.template?.matchAll(templateRegex) || []),
+        ].map((match) => match[0].replace(templateRegex, "$1").trim());
 
-        const maybeMissingField = arrayMissingValue(
-          Object.keys(recipe.fields),
-          templateMatches
-        );
+        const maybeMissingField = arrayMissingValue(Object.keys(fields), templateMatches);
 
         if (maybeMissingField) {
           errors.push(`Found unknown field ${maybeMissingField} in template.`);
@@ -56,9 +54,10 @@ const handler: OutputHandler = {
 
         return errors;
       },
-      handle: (inputData, strategyData?: StrategyData) => {
-        console.log(inputData);
-        console.log(strategyData);
+      handle: (db: Database, data?: StrategyData) => {
+        console.log("OBISIDAN DOT DAILY APPEND BSHES");
+        console.log(db);
+        console.log(data);
       },
     },
   ],

@@ -1,6 +1,5 @@
 import { arrayMissingValue } from "../../utils/index.js";
 import { OutputHandler } from "../../utils/types.js";
-import { RecipeObject } from "../../utils/validate-recipe.js";
 
 const { DEFAULT_FILE_PATH = "" } = process.env;
 
@@ -17,7 +16,7 @@ interface StrategyData {
 ////
 /// Utilities
 //
-const strategyIsReady = (recipe: RecipeObject, data?: StrategyData) => {
+const strategyIsReady = (fields: object, data?: StrategyData) => {
   const errors: string[] = [];
 
   if (!data || typeof data !== "object" || !data.fields || !data.fields.length) {
@@ -29,7 +28,7 @@ const strategyIsReady = (recipe: RecipeObject, data?: StrategyData) => {
     errors.push("No file path to use");
   }
 
-  const maybeMissingField = arrayMissingValue(Object.keys(recipe.fields), data.fields);
+  const maybeMissingField = arrayMissingValue(Object.keys(fields), data.fields);
   if (maybeMissingField) {
     errors.push(`Found unknown field ${maybeMissingField}.`);
   }

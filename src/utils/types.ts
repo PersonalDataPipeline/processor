@@ -1,4 +1,6 @@
-import { RecipeObject } from "./validate-recipe.js";
+import { Database } from "duckdb-async";
+
+export type OutputStrategyHandler = (db: Database, data?: object) => void;
 
 export interface OutputHandler {
   handlers: OutputStrategy[];
@@ -7,6 +9,11 @@ export interface OutputHandler {
 
 export interface OutputStrategy {
   name: () => string;
-  isReady: (recipe: RecipeObject, data?: object) => string[];
-  handle: (inputData: any, data?: object) => void;
+  isReady: (
+    fields: {
+      [key: string]: string;
+    },
+    data?: object
+  ) => string[];
+  handle: OutputStrategyHandler;
 }

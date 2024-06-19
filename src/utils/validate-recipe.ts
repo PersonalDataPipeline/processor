@@ -5,7 +5,7 @@ import getConfig, { Config } from "../utils/config.js";
 import transformations, { PipelineTransforms } from "../utils/transformations.js";
 import path from "path";
 import { readdirSync } from "fs";
-import { OutputHandler, OutputStrategy } from "./types.js";
+import { OutputHandler, OutputStrategyHandler } from "./types.js";
 import { arrayMissingValue } from "./index.js";
 
 interface InputObject {
@@ -16,18 +16,24 @@ interface InputObject {
   };
 }
 
-interface OutputObject {
-  [key: string]: {
-    strategy: string;
-    template: string;
-    data?: object;
-  }[];
+export interface OutputHandlerObject {
+  name: string;
+  handler: OutputStrategyHandler;
+  data?: object;
+}
+
+export interface OutputObject {
+  strategy: string;
+  template: string;
+  data?: object;
 }
 
 export interface RecipeObject {
   version: number;
   input: InputObject;
-  output: OutputObject;
+  output: {
+    [key: string]: OutputObject[];
+  };
   pipeline: {
     field: string;
     transform?: (keyof PipelineTransforms)[];
@@ -37,12 +43,10 @@ export interface RecipeObject {
   sources: {
     [key: string]: string;
   };
-  handlers: {
-    [key: string]: OutputStrategy;
-  };
   fields: {
     [key: string]: string;
   };
+  handlers: OutputHandlerObject[];
 }
 
 export const validateRecipe = async (
@@ -85,7 +89,11 @@ export const validateRecipe = async (
         toField: Joi.string(),
       })
     ),
-  }).validate(recipeRaw) as { value: RecipeObject; error: ValidationError };
+  }).validate(recipeRaw) as {
+    // TODO: This is not a complete recipe yet
+    value: RecipeObject;
+    error: ValidationError;
+  };
 
   if (error) {
     throw new Error(`Recipe validation: ${error.details[0].message}`);
@@ -168,7 +176,7 @@ export const validateRecipe = async (
   ////
   /// Validate outputs
   //
-  recipe.handlers = {};
+  recipe.handlers = [];
   const outputNames = Object.keys(recipe.output);
   for (const outputName of outputNames) {
     const { default: outputHandler } = (await import(
@@ -196,14 +204,18 @@ export const validateRecipe = async (
         throw new Error(`Invalid output strategy: ${strategyName}`);
       }
 
-      const strategyErrors = outputStrategy.isReady(recipe, strategyData);
+      const strategyErrors = outputStrategy.isReady(recipe.fields, strategyData);
       if (strategyErrors.length > 0) {
         throw new Error(
-          `Output strategy ${strategyName} for ${outputName} is not configured: \n${strategyErrors.join("\n")}`
+          `Output strategy ${outputName}.${strategyName} is not configured: \n${strategyErrors.join("\n")}`
         );
       }
 
-      recipe.handlers[`${outputName}.${strategyName}`] = outputStrategy;
+      recipe.handlers.push({
+        name: `${outputName}.${strategyName}`,
+        handler: outputStrategy.handle,
+        data: strategyData,
+      });
     }
   }
 

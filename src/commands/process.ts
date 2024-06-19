@@ -191,6 +191,10 @@ export default class Process extends BaseCommand<typeof Process> {
       }
     }
 
+    for (const handler of recipe.handlers) {
+      handler.handler(duckDb, handler.data);
+    }
+
     // console.log(recipe);
     // console.log(describeTables);
   }
