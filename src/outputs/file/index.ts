@@ -45,7 +45,7 @@ const handler: OutputHandler = {
     {
       name: () => "json",
       isReady: strategyIsReady,
-      handle: (inputData, strategyData?: StrategyData) => {
+      handle: async (inputData, strategyData?: StrategyData) => {
         console.log(inputData);
         console.log(strategyData);
       },
@@ -53,7 +53,7 @@ const handler: OutputHandler = {
     {
       name: () => "csv",
       isReady: strategyIsReady,
-      handle: (inputData, strategyData?: StrategyData) => {
+      handle: async (inputData, strategyData?: StrategyData) => {
         console.log(inputData);
         console.log(strategyData);
       },

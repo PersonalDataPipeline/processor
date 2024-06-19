@@ -7,7 +7,7 @@ input:
       'attendees[].email': 'event_emails'
   apple-import:
     contacts:
-      'fn[].value': 'full_name'
+      'fn[].value': 'name'
       'email[].value': 'contact_emails'
 output:
   file:
@@ -23,8 +23,7 @@ output:
     - strategy: 'daily_notes_append'
       data:
         date: 'start_date'
-        template: |
-          - {{ event_summary }} with [[People/{{ full_name }}|{{ full_name }}]] at {{ start_date_time }}
+        template: "- {{ event_summary }} {{#name__LINKED}}[[People/{{ . }}|{{ . }}]] {{/name__LINKED}}at {{ start_time }}"
 pipeline:
   - field: 'start_date_time'
     transform:

@@ -166,10 +166,13 @@ export const validateRecipe = async (
       recipe.fields[toField] = recipe.fields[field];
     }
 
-    if (linkTo && !Object.keys(recipe.fields).includes(linkTo)) {
-      throw new Error(
-        `${msgPrefix}Pipeline linkTo field "${linkTo}" does not exist in input data.`
-      );
+    if (linkTo) {
+      if (!Object.keys(recipe.fields).includes(linkTo)) {
+        throw new Error(
+          `${msgPrefix}Pipeline linkTo field "${linkTo}" does not exist in input data.`
+        );
+      }
+      // TODO: Add linked fields to recipe.fields[
     }
   }
 
