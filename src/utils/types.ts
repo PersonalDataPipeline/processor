@@ -3,7 +3,7 @@ import { Database } from "duckdb-async";
 export type OutputStrategyHandler = (
   db: Database,
   data: object,
-  fields: object
+  fields: { [key: string]: string }
 ) => Promise<void>;
 
 export interface OutputHandler {

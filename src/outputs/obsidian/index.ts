@@ -1,7 +1,6 @@
 import { Database } from "duckdb-async";
 import mustache from "mustache";
 
-import { arrayMissingValue } from "../../utils/index.js";
 import { OutputHandler } from "../../utils/types.js";
 
 const { OBSIDIAN_PATH_TO_NOTES = "" } = process.env;
@@ -18,13 +17,6 @@ interface StrategyData {
 ////
 /// Helpers
 //
-
-const templateRegex = /\{{2}(\s*\w+\s*)\}{2}/g;
-const templateMatches = (template: string = "") => {
-  return [...(template.matchAll(templateRegex) || [])].map((match) =>
-    match[0].replace(templateRegex, "$1").trim()
-  );
-};
 
 const getTemplateFields = (template: string): string[] => {
   const templateFields = [];
@@ -77,25 +69,43 @@ const handler: OutputHandler = {
 
         return errors;
       },
-      handle: async (db: Database, data: StrategyData, fields: object) => {
-        const templateFields = templateMatches(data.template);
-        console.log(templateFields);
-        console.log(fields);
-        console.log(mustache.parse(data.template || ""));
+      handle: async (
+        db: Database,
+        data: StrategyData,
+        fields: { [key: string]: string }
+      ) => {
+        const { date: dateField, template = "" } = data;
+        const templateFields = getTemplateFields(template);
+        const errorPrefix = "obsidian.daily_notes_append handler: ";
+
+        const fieldSources = [];
+        for (const templateField of templateFields) {
+          fieldSources.push(fields[templateField]);
+        }
+
+        // TODO: Move this check to isReady()
+        if ([...new Set(Object.values(fieldSources))].length > 1) {
+          throw new Error(
+            `${errorPrefix}Multiple tables found for template fields: ${fieldSources.join(", ")}`
+          );
+        }
 
         const results = await db.all(`
-          SELECT start_date, event_summary, start_time, name__LINKED
-          FROM "google.calendar--events"
+          SELECT ${dateField} ${templateFields.length ? `, ${templateFields.join(", ")}` : ""}
+          FROM '${fieldSources[0]}'
         `);
 
         for (const result of results) {
-          const { start_date, event_summary, start_time, name__LINKED } = result;
-          const output = mustache.render(data.template || "", {
-            start_date,
-            event_summary,
-            start_time,
-            name__LINKED: name__LINKED ? name__LINKED.flat() : [],
+          const templateObject: { [key: string]: string | string[] } = {};
+          templateFields.forEach((field) => {
+            templateObject[field] = Array.isArray(result[field])
+              ? [...new Set((result[field] as []).flat(Infinity))]
+              : (result[field] as string);
           });
+          console.log(templateObject);
+
+          const output = mustache.render(data.template || "", templateObject);
+          // console.log(output);
         }
 
         // console.log("OBISIDAN DOT DAILY APPEND BSHES");
