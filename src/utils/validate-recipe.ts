@@ -5,27 +5,25 @@ import getConfig, { Config } from "../utils/config.js";
 import transformations, { PipelineTransforms } from "../utils/transformations.js";
 import path from "path";
 import { readdirSync } from "fs";
-import { OutputHandler, OutputStrategyHandler } from "./types.js";
+import { KeyVal, OutputHandler, OutputStrategyHandler } from "./types.js";
 import { arrayMissingValue } from "./index.js";
 
 interface InputObject {
   [key: string]: {
-    [key: string]: {
-      [key: string]: string;
-    };
+    [key: string]: KeyVal;
   };
 }
 
 export interface OutputHandlerObject {
   name: string;
   handler: OutputStrategyHandler;
-  data?: object;
+  data?: KeyVal;
 }
 
 export interface OutputObject {
   strategy: string;
   template: string;
-  data?: object;
+  data?: KeyVal;
 }
 
 export interface RecipeObject {
@@ -40,12 +38,8 @@ export interface RecipeObject {
     toField?: string;
     linkTo?: string;
   }[];
-  sources: {
-    [key: string]: string;
-  };
-  fields: {
-    [key: string]: string;
-  };
+  sources: KeyVal;
+  fields: KeyVal;
   handlers: OutputHandlerObject[];
 }
 
@@ -99,7 +93,7 @@ export const validateRecipe = async (
     throw new Error(`Recipe validation: ${error.details[0].message}`);
   }
 
-  const allFields: { [key: string]: string } = {};
+  const allFields: KeyVal = {};
   const msgPrefix = "Recipe validation: ";
 
   ////

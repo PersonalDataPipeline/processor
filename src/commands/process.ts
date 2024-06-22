@@ -8,6 +8,7 @@ import { Database } from "duckdb-async";
 import { BaseCommand } from "./_base.js";
 import { RecipeObject, validateRecipe } from "../utils/validate-recipe.js";
 import transformations from "../utils/transformations.js";
+import { KeyVal } from "../utils/types.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -42,7 +43,7 @@ export default class Process extends BaseCommand<typeof Process> {
     ////
     /// Load input data
     //
-    const describeTables: { [key: string]: { [key: string]: string } } = {};
+    const describeTables: { [key: string]: KeyVal } = {};
     for (const source in recipe.sources) {
       const [inputName, inputData] = source.split(".");
       const dataPath = recipe.sources[source];
@@ -98,7 +99,7 @@ export default class Process extends BaseCommand<typeof Process> {
             table["column_type"] as string,
           ]),
         ]),
-      } as { [key: string]: string };
+      } as KeyVal;
     }
 
     ////
@@ -192,7 +193,7 @@ export default class Process extends BaseCommand<typeof Process> {
     }
 
     for (const handler of recipe.handlers) {
-      await handler.handler(duckDb, handler.data || {}, recipe.fields);
+      await handler.handler(duckDb, recipe.fields, handler.data);
     }
 
     // console.log(recipe);
