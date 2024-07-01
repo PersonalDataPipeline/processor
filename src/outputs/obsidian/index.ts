@@ -1,7 +1,9 @@
 import { Database } from "duckdb-async";
 import mustache from "mustache";
 
-import { OutputHandler } from "../../utils/types.js";
+import { KeyVal, OutputHandler } from "../../utils/types.js";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
+import path from "path";
 
 const { OBSIDIAN_PATH_TO_NOTES = "" } = process.env;
 
@@ -12,6 +14,11 @@ const { OBSIDIAN_PATH_TO_NOTES = "" } = process.env;
 interface StrategyData {
   date?: string;
   template?: string;
+}
+
+interface DailyNotesSettings {
+  folder: string;
+  template: string;
 }
 
 ////
@@ -57,7 +64,7 @@ const handler: OutputHandler = {
           errors.push("Missing template");
         }
 
-        // TODO: Add this back with linked fields can be checked
+        // TODO: Add this back when linked fields can be checked
         // const maybeMissingField = arrayMissingValue(
         //   Object.keys(fields),
         //   getTemplateFields(strategyData.template || "")
@@ -69,14 +76,11 @@ const handler: OutputHandler = {
 
         return errors;
       },
-      handle: async (
-        db: Database,
-        data: StrategyData,
-        fields: { [key: string]: string }
-      ) => {
-        const { date: dateField, template = "" } = data;
+      handle: async (db: Database, fields: KeyVal, data?: StrategyData) => {
+        const { date: dateField, template = "" } = data || {};
         const templateFields = getTemplateFields(template);
         const errorPrefix = "obsidian.daily_notes_append handler: ";
+        const yearToken = "{{ year }}";
 
         const fieldSources = [];
         for (const templateField of templateFields) {
@@ -90,29 +94,97 @@ const handler: OutputHandler = {
           );
         }
 
+        const settingsPath = path.join(
+          OBSIDIAN_PATH_TO_NOTES,
+          ".obsidian",
+          "daily-notes.json"
+        );
+
+        let noteSettings: DailyNotesSettings;
+        try {
+          noteSettings = JSON.parse(
+            readFileSync(settingsPath, { encoding: "utf8" })
+          ) as DailyNotesSettings;
+        } catch (error) {
+          throw new Error(
+            `${errorPrefix}Could not read Obsidian settings at ${settingsPath}`
+          );
+        }
+
+        let { folder: dailyFolder } = noteSettings;
+
+        // TODO: Add this back as recipe option
+        // const { template: dailyTemplate } = noteSettings;
+        // const templateContent = readFileSync(
+        //   path.join(OBSIDIAN_PATH_TO_NOTES, dailyTemplate) + ".md",
+        //   { encoding: "utf8" }
+        // );
+
+        const dailyFolderParts = dailyFolder.split(path.sep);
+        const maybeYearFolder = dailyFolderParts[dailyFolderParts.length - 1];
+        const thisYear = new Date().getFullYear();
+
+        // Looking for daily notes under yearly folders
+        if ([thisYear, thisYear - 1].includes(parseInt(maybeYearFolder, 10))) {
+          dailyFolderParts.pop();
+          dailyFolderParts.push(yearToken);
+          dailyFolder = path.join(OBSIDIAN_PATH_TO_NOTES, ...dailyFolderParts);
+        }
+
         const results = await db.all(`
           SELECT ${dateField} ${templateFields.length ? `, ${templateFields.join(", ")}` : ""}
           FROM '${fieldSources[0]}'
+          WHERE ${dateField} IS NOT NULL
         `);
 
         for (const result of results) {
+          const thisDate = result[dateField as string];
+
+          if (!thisDate) {
+            // TODO: Need to populate date from dateTime
+            continue;
+          }
+
           const templateObject: { [key: string]: string | string[] } = {};
           templateFields.forEach((field) => {
             templateObject[field] = Array.isArray(result[field])
-              ? [...new Set((result[field] as []).flat(Infinity))]
+              ? // TODO: Move this logic to the pipeline
+                // TODO: Why are the names dupliated?
+                [...new Set((result[field] as []).flat(Infinity))]
               : (result[field] as string);
           });
-          console.log(templateObject);
 
-          const output = mustache.render(data.template || "", templateObject);
-          // console.log(output);
+          // TODO: Does not take into account date format in Obsidian
+          const thisYear = thisDate.split("-")[0];
+          mkdirSync(dailyFolder.replace(yearToken, thisYear), { recursive: true });
+          const dailyNotePath = path.join(
+            dailyFolder.replace(yearToken, thisYear),
+            `${thisDate}.md`
+          );
+
+          let existingDailyContent = "";
+          if (existsSync(dailyNotePath)) {
+            existingDailyContent = readFileSync(dailyNotePath, { encoding: "utf8" });
+          }
+          // TODO: Add this back as recipe option, see above
+          // else {
+          //   existingDailyContent = `${templateContent}`;
+          // }
+
+          const dailyContentLines = existingDailyContent
+            .split("\n")
+            .filter((line) => !line.includes("#pdpl"));
+
+          if (dailyContentLines.at(-1) !== "") {
+            dailyContentLines.push("");
+          }
+
+          dailyContentLines.push(
+            mustache.render(template || "", templateObject) + " #pdpl"
+          );
+
+          writeFileSync(dailyNotePath, dailyContentLines.join("\n"));
         }
-
-        // console.log("OBISIDAN DOT DAILY APPEND BSHES");
-        // console.log(db);
-        // console.log(data);
-        // console.log(fields);
-        // console.log(templateFields);
       },
     },
   ],
