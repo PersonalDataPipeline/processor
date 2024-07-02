@@ -1,5 +1,6 @@
 import { Database } from "duckdb-async";
 import mustache from "mustache";
+mustache.escape = (text) => text;
 
 import { KeyVal, OutputHandler } from "../../utils/types.js";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
@@ -137,6 +138,7 @@ const handler: OutputHandler = {
           WHERE ${dateField} IS NOT NULL
         `);
 
+        const dailyFiles: { [key: string]: string[] } = {};
         for (const result of results) {
           const thisDate = result[dateField as string];
 
@@ -149,7 +151,7 @@ const handler: OutputHandler = {
           templateFields.forEach((field) => {
             templateObject[field] = Array.isArray(result[field])
               ? // TODO: Move this logic to the pipeline
-                // TODO: Why are the names dupliated?
+                // TODO: Why are the names duplicated?
                 [...new Set((result[field] as []).flat(Infinity))]
               : (result[field] as string);
           });
@@ -162,6 +164,18 @@ const handler: OutputHandler = {
             `${thisDate}.md`
           );
 
+          if (!dailyFiles[dailyNotePath]) {
+            dailyFiles[dailyNotePath] = [];
+          }
+
+          dailyFiles[dailyNotePath].push(
+            mustache.render(template || "", templateObject) + " #pdpl"
+          );
+        }
+
+        for (const dailyNotePath in dailyFiles) {
+          const appendLines = [...new Set(dailyFiles[dailyNotePath])];
+
           let existingDailyContent = "";
           if (existsSync(dailyNotePath)) {
             existingDailyContent = readFileSync(dailyNotePath, { encoding: "utf8" });
@@ -171,19 +185,20 @@ const handler: OutputHandler = {
           //   existingDailyContent = `${templateContent}`;
           // }
 
-          const dailyContentLines = existingDailyContent
+          const contentLines = existingDailyContent
             .split("\n")
             .filter((line) => !line.includes("#pdpl"));
 
-          if (dailyContentLines.at(-1) !== "") {
-            dailyContentLines.push("");
-          }
+          const addLine = !contentLines.length || contentLines.at(-1) === "" ? "" : "\n";
 
-          dailyContentLines.push(
-            mustache.render(template || "", templateObject) + " #pdpl"
+          writeFileSync(
+            dailyNotePath,
+            [
+              ...contentLines,
+              `${addLine}**Google Calendar events** #pdpl`,
+              ...appendLines,
+            ].join("\n")
           );
-
-          writeFileSync(dailyNotePath, dailyContentLines.join("\n"));
         }
       },
     },
