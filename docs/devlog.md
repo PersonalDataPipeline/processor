@@ -2,9 +2,27 @@
 
 Notes taken during development, newest to oldest. 
 
-## issues
-- Recipes as files are hard to browse and would become unwieldy at some point
-- Need better reporting/logging and control over when an error is thrown versus no output
+## TODO:
+- [ ] Data transformation (see 2024-06-22 entry below)
+- [ ] Recipes as files are hard to browse and would become unwieldy at some point
+- [ ] Need a way to skip values (like my name) and replace values (like names that should point elsewhere) during processing
+- [ ] Need a way to delete and replace content on subsequent processing runs
+- [ ] Need better reporting/logging and control over when an error is thrown versus no output
+
+## [[2024-07-01]]
+
+Jumping back in off a short break. I'm very close to this being a working prototype and want to be mindful about what remains and move the rest to the list above. I need to get the daily output working then the file output. The column transformations and everything else (that I know of now) are not required for the PoC.
+
+Iterating through the results and building the daily note for each result means that each event will require reading and writing files, even if there are multiple events for a day. Performance-wise this sucks but it also makes the "delete previous run" logic also delete the previous written event. This also means if the process completes that we'll have incomplete events written to the day. 
+
+The date field that's used to determine what note to write to needs to be a composite of two potential fields for this use case (see entry below). This is an actual problem because we'll be missing events if this isn't solved.
+
+## [[2024-06-22]]
+
+Lots of progress but not a lot of notes. I've figured out a number of the challenges that came up and the system is working well. There are still a few catch points, besides the `TODO`s that I've been adding. Big ones right now:
+
+- Transforming the data before processing needs a lot more flexibility than it has right now. I need to be able to convert a column from one type to another but I don't want to expose too much of that process by requiring DB column types in the recipe. I want it to do a lot of this on it's own without explicit direction but I don't know how far I can get doing that. Converting to/from arrays is probably going to be the most problematic. I don't think this is going to be a show stopper but it definitely needs more thought.
+- Somewhat related ... if a column does not have a value, there's no way to currently express "add if not exists" or something similar. This is a problem with Google Calendar data because there is a field `start.date` that's there sometimes (all day events) but should be filled in with another field, `start.dateTime` (with modifications) if not. This might just be as simple as some new property or transformation function that says what needs to be done. Again, I don't think this is a huge problem, just a current limitation.
 
 ## [[2024-06-16]]
 
